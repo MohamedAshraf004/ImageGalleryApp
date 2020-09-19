@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication.Cookies;
+﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -7,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Net.Http.Headers;
 using System;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace ImageGallery.Client
 {
@@ -17,6 +19,7 @@ namespace ImageGallery.Client
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
+            JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
         }
 
         // This method gets called by the runtime. Use this method to add services to the container.
@@ -45,10 +48,23 @@ namespace ImageGallery.Client
                  options.ResponseType = "code";
                  options.ClientId = "imagegallaryclient";
                  //options.UsePkce = false;
+
+                 //theses are added by default
+
                  //options.CallbackPath=new PathString() if i want to change call back path
                  //options.SignedOutCallbackPath=new Microsoft.AspNetCore.Http.PathString() def /signout-callback-oidc
-                 options.Scope.Add("profile");
-                 options.Scope.Add("openid");
+                 //options.Scope.Add("profile");
+                 //options.Scope.Add("openid");
+
+                 options.Scope.Add("address"); 
+                 //options.ClaimActions.Remove("nbf");
+                 //Delete these nclaims from identity token for making it short and then adding these claims to 
+                 // access token ==>userinfo
+                 options.ClaimActions.DeleteClaim("auth_time"); 
+                 options.ClaimActions.DeleteClaim("s_hash");
+                 options.ClaimActions.DeleteClaim("idp");
+                 options.ClaimActions.DeleteClaim("sid");
+                 /*options.ClaimActions.DeleteClaim("address"); address don't added by default in identity claims so no need to delete it */
                  options.SaveTokens = true;
                  options.ClientSecret = "secret";
                  options.GetClaimsFromUserInfoEndpoint = true;
