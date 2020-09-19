@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authentication;
+﻿using IdentityModel;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Builder;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
 using System;
 using System.IdentityModel.Tokens.Jwt;
@@ -35,12 +37,24 @@ namespace ImageGallery.Client
                 client.DefaultRequestHeaders.Clear();
                 client.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
             });
+
+            services.AddHttpClient("IDPClient", client =>
+            {
+                client.BaseAddress = new Uri("https://localhost:44318/");
+                client.DefaultRequestHeaders.Clear();
+                client.DefaultRequestHeaders.Add(HeaderNames.Accept, "application/json");
+            });
+
+
             services.AddAuthentication(options =>
             {
                 options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
             })
-            .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme, options =>
+             {
+                 options.AccessDeniedPath = "/Authorization/AccessDenied";
+             })
             .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
              {
                  options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
@@ -56,18 +70,26 @@ namespace ImageGallery.Client
                  //options.Scope.Add("profile");
                  //options.Scope.Add("openid");
 
-                 options.Scope.Add("address"); 
+                 options.Scope.Add("address");
+                 options.Scope.Add("roles");
                  //options.ClaimActions.Remove("nbf");
                  //Delete these nclaims from identity token for making it short and then adding these claims to 
                  // access token ==>userinfo
-                 options.ClaimActions.DeleteClaim("auth_time"); 
+                 options.ClaimActions.DeleteClaim("auth_time");
                  options.ClaimActions.DeleteClaim("s_hash");
                  options.ClaimActions.DeleteClaim("idp");
                  options.ClaimActions.DeleteClaim("sid");
+                 options.ClaimActions.MapUniqueJsonKey("role", "role");
                  /*options.ClaimActions.DeleteClaim("address"); address don't added by default in identity claims so no need to delete it */
+
                  options.SaveTokens = true;
                  options.ClientSecret = "secret";
                  options.GetClaimsFromUserInfoEndpoint = true;
+                 options.TokenValidationParameters = new TokenValidationParameters()
+                 {
+                     NameClaimType = JwtClaimTypes.GivenName,
+                     RoleClaimType = JwtClaimTypes.Role
+                 };
              });
         }
 
